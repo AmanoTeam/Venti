@@ -9,13 +9,13 @@ declare -r gmp_tarball='/tmp/gmp.tar.xz'
 declare -r gmp_directory='/tmp/gmp-6.2.1'
 
 declare -r mpfr_tarball='/tmp/mpfr.tar.xz'
-declare -r mpfr_directory='/tmp/mpfr-4.1.1'
+declare -r mpfr_directory='/tmp/mpfr-4.2.0'
 
 declare -r mpc_tarball='/tmp/mpc.tar.gz'
-declare -r mpc_directory='/tmp/mpc-1.3.0'
+declare -r mpc_directory='/tmp/mpc-1.3.1'
 
 declare -r binutils_tarball='/tmp/binutils.tar.xz'
-declare -r binutils_directory='/tmp/binutils-2.39'
+declare -r binutils_directory='/tmp/binutils-2.40'
 
 declare -r gcc_tarball='/tmp/gcc.tar.xz'
 declare -r gcc_directory='/tmp/gcc-12.2.0'
@@ -32,13 +32,13 @@ declare -r toolchain_directory="/tmp/unknown-unknown-dragonfly"
 wget --no-verbose 'https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.xz' --output-document="${gmp_tarball}"
 tar --directory="$(dirname "${gmp_directory}")" --extract --file="${gmp_tarball}"
 
-wget --no-verbose 'https://ftp.gnu.org/gnu/mpfr/mpfr-4.1.1.tar.xz' --output-document="${mpfr_tarball}"
+wget --no-verbose 'https://ftp.gnu.org/gnu/mpfr/mpfr-4.2.0.tar.xz' --output-document="${mpfr_tarball}"
 tar --directory="$(dirname "${mpfr_directory}")" --extract --file="${mpfr_tarball}"
 
-wget --no-verbose 'https://ftp.gnu.org/gnu/mpc/mpc-1.3.0.tar.gz' --output-document="${mpc_tarball}"
+wget --no-verbose 'https://ftp.gnu.org/gnu/mpc/mpc-1.3.1.tar.gz' --output-document="${mpc_tarball}"
 tar --directory="$(dirname "${mpc_directory}")" --extract --file="${mpc_tarball}"
 
-wget --no-verbose 'https://ftp.gnu.org/gnu/binutils/binutils-2.39.tar.xz' --output-document="${binutils_tarball}"
+wget --no-verbose 'https://ftp.gnu.org/gnu/binutils/binutils-2.40.tar.xz' --output-document="${binutils_tarball}"
 tar --directory="$(dirname "${binutils_directory}")" --extract --file="${binutils_tarball}"
 
 wget --no-verbose 'https://ftp.gnu.org/gnu/gcc/gcc-12.2.0/gcc-12.2.0.tar.xz' --output-document="${gcc_tarball}"
@@ -157,7 +157,9 @@ rm --force --recursive ./*
 	--disable-bootstrap \
 	--without-headers \
 	--enable-ld \
-	--enable-gold
+	--enable-gold \
+	--with-sysroot="${toolchain_directory}/${triple}" \
+	--with-native-system-header-dir='/include'
 
 LD_LIBRARY_PATH="${toolchain_directory}/lib" PATH="${PATH}:${toolchain_directory}/bin" make CFLAGS_FOR_TARGET="${cflags} -fno-stack-protector" CXXFLAGS_FOR_TARGET="${cflags} -fno-stack-protector" all --jobs="$(nproc)"
 make install
