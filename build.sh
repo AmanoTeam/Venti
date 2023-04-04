@@ -3,7 +3,9 @@
 set -e
 set -u
 
-declare -r toolchain_tarball="$(pwd)/dragonfly-cross.tar.xz"
+declare -r revision="$(git rev-parse --short HEAD)"
+
+declare -r toolchain_tarball="${PWD}/dragonfly-cross.tar.xz"
 
 declare -r gmp_tarball='/tmp/gmp.tar.xz'
 declare -r gmp_directory='/tmp/gmp-6.2.1'
@@ -25,7 +27,7 @@ declare -r system_directory='/tmp/dragonflybsd'
 
 declare -r triple='x86_64-unknown-dragonfly'
 
-declare -r cflags='-Wno-unused-command-line-argument -Os -s -DNDEBUG'
+declare -r cflags='-Os -s -DNDEBUG'
 
 declare -r toolchain_directory="/tmp/unknown-unknown-dragonfly"
 
@@ -134,7 +136,7 @@ rm --force --recursive ./*
 	--with-mpc="${toolchain_directory}" \
 	--with-mpfr="${toolchain_directory}" \
 	--with-system-zlib \
-	--with-bugurl='https://github.com/AmanoTeam/FreeBSD-Cross/issues' \
+	--with-bugurl='https://github.com/AmanoTeam/dr4g0nflybsdcr0ss/issues' \
 	--enable-__cxa_atexit \
 	--enable-cet='auto' \
 	--enable-checking='release' \
@@ -158,12 +160,15 @@ rm --force --recursive ./*
 	--without-headers \
 	--enable-ld \
 	--enable-gold \
+	--with-pic \
+	--with-gcc-major-version-only \
+	--with-pkgversion="dr4g0nflybsdcr0ss v0.1-${revision}" \
 	--with-sysroot="${toolchain_directory}/${triple}" \
 	--with-native-system-header-dir='/include'
 
 LD_LIBRARY_PATH="${toolchain_directory}/lib" PATH="${PATH}:${toolchain_directory}/bin" make CFLAGS_FOR_TARGET="${cflags} -fno-stack-protector" CXXFLAGS_FOR_TARGET="${cflags} -fno-stack-protector" all --jobs="$(nproc)"
 make install
 
-rm --recursive "${toolchain_directory}/lib/gcc/${triple}/12.2.0/include-fixed"
+rm --recursive "${toolchain_directory}/lib/gcc/${triple}/12/include-fixed"
 
 tar --directory="$(dirname "${toolchain_directory}")" --create --file=- "$(basename "${toolchain_directory}")" |  xz --threads=0 --compress -9 > "${toolchain_tarball}"
