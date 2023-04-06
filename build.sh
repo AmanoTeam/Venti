@@ -23,6 +23,7 @@ declare -r gcc_tarball='/tmp/gcc.tar.xz'
 declare -r gcc_directory='/tmp/gcc-12.2.0'
 
 declare -r system_image='/tmp/dragonflybsd.iso'
+declare -r system_image_compressed='/tmp/dragonflybsd.iso.bz2'
 declare -r system_directory='/tmp/dragonflybsd'
 
 declare -r triple='x86_64-unknown-dragonfly'
@@ -46,7 +47,13 @@ tar --directory="$(dirname "${binutils_directory}")" --extract --file="${binutil
 wget --no-verbose 'https://ftp.gnu.org/gnu/gcc/gcc-12.2.0/gcc-12.2.0.tar.xz' --output-document="${gcc_tarball}"
 tar --directory="$(dirname "${gcc_directory}")" --extract --file="${gcc_tarball}"
 
-wget --no-verbose 'https://mirror-master.dragonflybsd.org/iso-images/dfly-x86_64-6.4.0_REL.iso'  --output-document="${system_image}"
+wget --no-verbose 'https://mirror-master.dragonflybsd.org/iso-images/dfly-x86_64-5.0.0_REL.iso.bz2'  --output-document="${system_image_compressed}"
+
+pushd "$(dirname "${system_image_compressed}")"
+
+bzip2 --decompress "${system_image_compressed}"
+
+pushd
 
 [ -d "${system_directory}" ] || mkdir "${system_directory}"
 
