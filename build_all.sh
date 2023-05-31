@@ -20,7 +20,7 @@ declare -ra targets=(
 	'mips64el-unknown-linux-gnuabi64'
 )
 
-declare -r tarballs_directory="${PWD}/atar-tarballs"
+declare -r tarballs_directory="${PWD}/venti-tarballs"
 
 [ -d "${tarballs_directory}" ] || mkdir "${tarballs_directory}"
 
@@ -32,8 +32,8 @@ for target in "${targets[@]}"; do
 	
 	declare tarball_filename="${tarballs_directory}/${target}.tar.xz"
 	
-	tar --directory='/tmp' --create --file=- 'atar' |  xz --threads=0 --compress -9 > "${tarball_filename}"
+	tar --directory='/tmp' --create --file=- 'venti' |  xz --threads=0 --compress -9 > "${tarball_filename}"
 	sha256sum "${tarball_filename}" > "${tarball_filename}.sha256"
 	
-	rm --recursive --force '/tmp/atar'
+	rm --recursive --force '/tmp/venti'
 done
