@@ -1,11 +1,8 @@
 #!/bin/bash
 
-set -e
-set -u
+set -eu
 
 declare -r revision="$(git rev-parse --short HEAD)"
-
-declare -r toolchain_tarball="${PWD}/dragonfly-cross.tar.xz"
 
 declare -r gmp_tarball='/tmp/gmp.tar.xz'
 declare -r gmp_directory='/tmp/gmp-6.2.1'
@@ -28,9 +25,12 @@ declare -r system_directory='/tmp/dragonflybsd'
 
 declare -r triple='x86_64-unknown-dragonfly'
 
-declare -r cflags='-Os -s -DNDEBUG'
+declare -r optflags='-Os'
+declare -r linkflags='-Wl,-s'
 
-declare -r toolchain_directory="/tmp/unknown-unknown-dragonfly"
+source "./submodules/obggcc/toolchains/${1}.sh"
+
+declare -r toolchain_directory="/tmp/venti"
 
 wget --no-verbose 'https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.xz' --output-document="${gmp_tarball}"
 tar --directory="$(dirname "${gmp_directory}")" --extract --file="${gmp_tarball}"
@@ -69,22 +69,22 @@ sudo umount "${system_directory}"
 
 pushd "${toolchain_directory}/${triple}/lib"
 
-find . -xtype l | xargs ls -l | grep '/lib/' | awk '{print "unlink "$9" && ln -s $(basename "$11") $(basename "$9")"}'  | bash
+find . -type l | xargs ls -l | grep '/lib/' | awk '{print "unlink "$9" && ln -s $(basename "$11") $(basename "$9")"}'  | bash
 
 pushd
-
-while read file; do
-	sed -i "s/-O2/${cflags}/g" "${file}"
-done <<< "$(find '/tmp' -type 'f' -regex '.*configure')"
 
 [ -d "${gmp_directory}/build" ] || mkdir "${gmp_directory}/build"
 
 cd "${gmp_directory}/build"
 
 ../configure \
+	--host="${CROSS_COMPILE_TRIPLET}" \
 	--prefix="${toolchain_directory}" \
 	--enable-shared \
-	--enable-static
+	--enable-static \
+	CFLAGS="${optflags}" \
+	CXXFLAGS="${optflags}" \
+	LDFLAGS="${linkflags}"
 
 make all --jobs
 make install
@@ -94,10 +94,14 @@ make install
 cd "${mpfr_directory}/build"
 
 ../configure \
+	--host="${CROSS_COMPILE_TRIPLET}" \
 	--prefix="${toolchain_directory}" \
 	--with-gmp="${toolchain_directory}" \
 	--enable-shared \
-	--enable-static
+	--enable-static \
+	CFLAGS="${optflags}" \
+	CXXFLAGS="${optflags}" \
+	LDFLAGS="${linkflags}"
 
 make all --jobs
 make install
@@ -107,10 +111,14 @@ make install
 cd "${mpc_directory}/build"
 
 ../configure \
+	--host="${CROSS_COMPILE_TRIPLET}" \
 	--prefix="${toolchain_directory}" \
 	--with-gmp="${toolchain_directory}" \
 	--enable-shared \
-	--enable-static
+	--enable-static \
+	CFLAGS="${optflags}" \
+	CXXFLAGS="${optflags}" \
+	LDFLAGS="${linkflags}"
 
 make all --jobs
 make install
@@ -123,12 +131,19 @@ cd "${binutils_directory}/build"
 rm --force --recursive ./*
 
 ../configure \
+	--host="${CROSS_COMPILE_TRIPLET}" \
 	--target="${triple}" \
 	--prefix="${toolchain_directory}" \
 	--enable-gold \
-	--enable-ld
+	--enable-ld \
+	--enable-lto \
+	--disable-gprofng \
+	--with-static-standard-libraries \
+	CFLAGS="${optflags}" \
+	CXXFLAGS="${optflags}" \
+	LDFLAGS="${linkflags}"
 
-make all --jobs="$(nproc)"
+make all --jobs="$(($(nproc) * 8))"
 make install
 
 [ -d "${gcc_directory}/build" ] || mkdir "${gcc_directory}/build"
@@ -137,13 +152,13 @@ cd "${gcc_directory}/build"
 rm --force --recursive ./*
 
 ../configure \
+	--host="${CROSS_COMPILE_TRIPLET}" \
 	--target="${triple}" \
 	--prefix="${toolchain_directory}" \
 	--with-gmp="${toolchain_directory}" \
 	--with-mpc="${toolchain_directory}" \
 	--with-mpfr="${toolchain_directory}" \
-	--with-system-zlib \
-	--with-bugurl='https://github.com/AmanoTeam/dr4g0nflybsdcr0ss/issues' \
+	--with-bugurl='https://github.com/AmanoTeam/Venti/issues' \
 	--enable-__cxa_atexit \
 	--enable-cet='auto' \
 	--enable-checking='release' \
@@ -169,13 +184,30 @@ rm --force --recursive ./*
 	--enable-gold \
 	--with-pic \
 	--with-gcc-major-version-only \
-	--with-pkgversion="dr4g0nflybsdcr0ss v0.1-${revision}" \
+	--with-pkgversion="Venti v0.2-${revision}" \
 	--with-sysroot="${toolchain_directory}/${triple}" \
-	--with-native-system-header-dir='/include'
+	--with-native-system-header-dir='/include' \
+	--disable-nls \
+	CFLAGS="${optflags}" \
+	CXXFLAGS="${optflags}" \
+	LDFLAGS="-Wl,-rpath-link,${OBGGCC_TOOLCHAIN}/${CROSS_COMPILE_TRIPLET}/lib ${linkflags}"
 
-LD_LIBRARY_PATH="${toolchain_directory}/lib" PATH="${PATH}:${toolchain_directory}/bin" make CFLAGS_FOR_TARGET="${cflags} -fno-stack-protector" CXXFLAGS_FOR_TARGET="${cflags} -fno-stack-protector" all --jobs="$(nproc)"
+LD_LIBRARY_PATH="${toolchain_directory}/lib" PATH="${PATH}:${toolchain_directory}/bin" make \
+	CFLAGS_FOR_TARGET="${optflags} ${linkflags}" \
+	CXXFLAGS_FOR_TARGET="${optflags} ${linkflags}" \
+	all --jobs="$(($(nproc) * 8))"
 make install
 
+cd "${toolchain_directory}/${triple}/bin"
+
+for name in *; do
+	rm "${name}"
+	ln -s "../../bin/${triple}-${name}" "${name}"
+done
+
+rm --recursive "${toolchain_directory}/share"
 rm --recursive "${toolchain_directory}/lib/gcc/${triple}/12/include-fixed"
 
-tar --directory="$(dirname "${toolchain_directory}")" --create --file=- "$(basename "${toolchain_directory}")" |  xz --threads=0 --compress -9 > "${toolchain_tarball}"
+patchelf --add-rpath '$ORIGIN/../../../../lib' "${toolchain_directory}/libexec/gcc/${triple}/12/cc1"
+patchelf --add-rpath '$ORIGIN/../../../../lib' "${toolchain_directory}/libexec/gcc/${triple}/12/cc1plus"
+patchelf --add-rpath '$ORIGIN/../../../../lib' "${toolchain_directory}/libexec/gcc/${triple}/12/lto1"
