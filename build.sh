@@ -16,17 +16,19 @@ declare -r mpc_directory='/tmp/mpc-1.3.1'
 declare -r binutils_tarball='/tmp/binutils.tar.xz'
 declare -r binutils_directory='/tmp/binutils-2.40'
 
-declare -r gcc_tarball='/tmp/gcc.tar.xz'
-declare -r gcc_directory='/tmp/gcc-12.2.0'
+declare -r gcc_tarball='/tmp/gcc.tar.gz'
+declare -r gcc_directory='/tmp/gcc-master'
 
 declare -r system_image='/tmp/dragonflybsd.iso'
 declare -r system_image_compressed='/tmp/dragonflybsd.iso.bz2'
 declare -r system_directory='/tmp/dragonflybsd'
 
-declare -r triple='x86_64-unknown-dragonfly'
+declare -r triplet='x86_64-unknown-dragonfly'
 
 declare -r optflags='-Os'
 declare -r linkflags='-Wl,-s'
+
+declare -r max_jobs="$(($(nproc) * 12))"
 
 source "./submodules/obggcc/toolchains/${1}.sh"
 
@@ -44,7 +46,7 @@ tar --directory="$(dirname "${mpc_directory}")" --extract --file="${mpc_tarball}
 wget --no-verbose 'https://ftp.gnu.org/gnu/binutils/binutils-2.40.tar.xz' --output-document="${binutils_tarball}"
 tar --directory="$(dirname "${binutils_directory}")" --extract --file="${binutils_tarball}"
 
-wget --no-verbose 'https://ftp.gnu.org/gnu/gcc/gcc-12.2.0/gcc-12.2.0.tar.xz' --output-document="${gcc_tarball}"
+wget --no-verbose 'https://codeload.github.com/gcc-mirror/gcc/tar.gz/refs/heads/master' --output-document="${gcc_tarball}"
 tar --directory="$(dirname "${gcc_directory}")" --extract --file="${gcc_tarball}"
 
 wget --no-verbose 'https://mirror-master.dragonflybsd.org/iso-images/dfly-x86_64-5.0.0_REL.iso.bz2'  --output-document="${system_image_compressed}"
@@ -59,15 +61,15 @@ pushd
 
 sudo mount -o loop "${system_image}" "${system_directory}"
 
-[ -d "${toolchain_directory}/${triple}" ] || mkdir --parent "${toolchain_directory}/${triple}"
+[ -d "${toolchain_directory}/${triplet}" ] || mkdir --parent "${toolchain_directory}/${triplet}"
 
-cp --recursive "${system_directory}/lib" "${toolchain_directory}/${triple}"
-cp --recursive "${system_directory}/usr/lib" "${toolchain_directory}/${triple}"
-cp --recursive "${system_directory}/usr/include" "${toolchain_directory}/${triple}"
+cp --recursive "${system_directory}/lib" "${toolchain_directory}/${triplet}"
+cp --recursive "${system_directory}/usr/lib" "${toolchain_directory}/${triplet}"
+cp --recursive "${system_directory}/usr/include" "${toolchain_directory}/${triplet}"
 
 sudo umount "${system_directory}"
 
-pushd "${toolchain_directory}/${triple}/lib"
+pushd "${toolchain_directory}/${triplet}/lib"
 
 find . -type l | xargs ls -l | grep '/lib/' | awk '{print "unlink "$9" && ln -s $(basename "$11") $(basename "$9")"}'  | bash
 
@@ -132,7 +134,7 @@ rm --force --recursive ./*
 
 ../configure \
 	--host="${CROSS_COMPILE_TRIPLET}" \
-	--target="${triple}" \
+	--target="${triplet}" \
 	--prefix="${toolchain_directory}" \
 	--enable-gold \
 	--enable-ld \
@@ -143,7 +145,7 @@ rm --force --recursive ./*
 	CXXFLAGS="${optflags}" \
 	LDFLAGS="${linkflags}"
 
-make all --jobs="$(($(nproc) * 8))"
+make all --jobs="${max_jobs}"
 make install
 
 [ -d "${gcc_directory}/build" ] || mkdir "${gcc_directory}/build"
@@ -153,12 +155,16 @@ rm --force --recursive ./*
 
 ../configure \
 	--host="${CROSS_COMPILE_TRIPLET}" \
-	--target="${triple}" \
+	--target="${triplet}" \
 	--prefix="${toolchain_directory}" \
 	--with-gmp="${toolchain_directory}" \
 	--with-mpc="${toolchain_directory}" \
 	--with-mpfr="${toolchain_directory}" \
 	--with-bugurl='https://github.com/AmanoTeam/Venti/issues' \
+	--with-gcc-major-version-only \
+	--with-pkgversion="Venti v0.3-${revision}" \
+	--with-sysroot="${toolchain_directory}/${triplet}" \
+	--with-native-system-header-dir='/include' \
 	--enable-__cxa_atexit \
 	--enable-cet='auto' \
 	--enable-checking='release' \
@@ -169,25 +175,20 @@ rm --force --recursive ./*
 	--enable-link-serialization='1' \
 	--enable-linker-build-id \
 	--enable-lto \
-	--disable-multilib \
 	--enable-plugin \
 	--enable-shared \
 	--enable-threads='posix' \
 	--enable-libssp \
-	--disable-libstdcxx-pch \
-	--disable-werror \
 	--enable-languages='c,c++' \
-	--disable-libgomp \
-	--disable-bootstrap \
-	--without-headers \
 	--enable-ld \
 	--enable-gold \
-	--with-pic \
-	--with-gcc-major-version-only \
-	--with-pkgversion="Venti v0.2-${revision}" \
-	--with-sysroot="${toolchain_directory}/${triple}" \
-	--with-native-system-header-dir='/include' \
+	--disable-libstdcxx-pch \
+	--disable-werror \
+	--disable-libgomp \
+	--disable-bootstrap \
+	--disable-multilib \
 	--disable-nls \
+	--without-headers \
 	CFLAGS="${optflags}" \
 	CXXFLAGS="${optflags}" \
 	LDFLAGS="-Wl,-rpath-link,${OBGGCC_TOOLCHAIN}/${CROSS_COMPILE_TRIPLET}/lib ${linkflags}"
@@ -195,19 +196,19 @@ rm --force --recursive ./*
 LD_LIBRARY_PATH="${toolchain_directory}/lib" PATH="${PATH}:${toolchain_directory}/bin" make \
 	CFLAGS_FOR_TARGET="${optflags} ${linkflags}" \
 	CXXFLAGS_FOR_TARGET="${optflags} ${linkflags}" \
-	all --jobs="$(($(nproc) * 8))"
+	all --jobs="${max_jobs}"
 make install
 
-cd "${toolchain_directory}/${triple}/bin"
+cd "${toolchain_directory}/${triplet}/bin"
 
 for name in *; do
 	rm "${name}"
-	ln -s "../../bin/${triple}-${name}" "${name}"
+	ln -s "../../bin/${triplet}-${name}" "${name}"
 done
 
 rm --recursive "${toolchain_directory}/share"
-rm --recursive "${toolchain_directory}/lib/gcc/${triple}/12/include-fixed"
+rm --recursive "${toolchain_directory}/lib/gcc/${triplet}/"*"/include-fixed"
 
-patchelf --add-rpath '$ORIGIN/../../../../lib' "${toolchain_directory}/libexec/gcc/${triple}/12/cc1"
-patchelf --add-rpath '$ORIGIN/../../../../lib' "${toolchain_directory}/libexec/gcc/${triple}/12/cc1plus"
-patchelf --add-rpath '$ORIGIN/../../../../lib' "${toolchain_directory}/libexec/gcc/${triple}/12/lto1"
+patchelf --add-rpath '$ORIGIN/../../../../lib' "${toolchain_directory}/libexec/gcc/${triplet}/"*"/cc1"
+patchelf --add-rpath '$ORIGIN/../../../../lib' "${toolchain_directory}/libexec/gcc/${triplet}/"*"/cc1plus"
+patchelf --add-rpath '$ORIGIN/../../../../lib' "${toolchain_directory}/libexec/gcc/${triplet}/"*"/lto1"
