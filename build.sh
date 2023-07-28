@@ -28,9 +28,29 @@ declare -r triplet='x86_64-unknown-dragonfly'
 declare -r optflags='-Os'
 declare -r linkflags='-Wl,-s'
 
-declare -r max_jobs="$(($(nproc) * 12))"
+declare -r max_jobs="$(($(nproc) * 8))"
 
-source "./submodules/obggcc/toolchains/${1}.sh"
+declare build_type="${1}"
+
+if [ -z "${build_type}" ]; then
+	build_type='native'
+fi
+
+declare is_native='0'
+
+if [ "${build_type}" == 'native' ]; then
+	is_native='1'
+fi
+
+declare OBGGCC_TOOLCHAIN='/tmp/obggcc-toolchain'
+declare CROSS_COMPILE_TRIPLET=''
+
+declare cross_compile_flags=''
+
+if ! (( is_native )); then
+	source "./submodules/obggcc/toolchains/${build_type}.sh"
+	cross_compile_flags+="--host=${CROSS_COMPILE_TRIPLET}"
+fi
 
 declare -r toolchain_directory="/tmp/venti"
 
@@ -80,10 +100,10 @@ pushd
 cd "${gmp_directory}/build"
 
 ../configure \
-	--host="${CROSS_COMPILE_TRIPLET}" \
 	--prefix="${toolchain_directory}" \
 	--enable-shared \
 	--enable-static \
+	${cross_compile_flags} \
 	CFLAGS="${optflags}" \
 	CXXFLAGS="${optflags}" \
 	LDFLAGS="${linkflags}"
@@ -96,11 +116,11 @@ make install
 cd "${mpfr_directory}/build"
 
 ../configure \
-	--host="${CROSS_COMPILE_TRIPLET}" \
 	--prefix="${toolchain_directory}" \
 	--with-gmp="${toolchain_directory}" \
 	--enable-shared \
 	--enable-static \
+	${cross_compile_flags} \
 	CFLAGS="${optflags}" \
 	CXXFLAGS="${optflags}" \
 	LDFLAGS="${linkflags}"
@@ -113,11 +133,11 @@ make install
 cd "${mpc_directory}/build"
 
 ../configure \
-	--host="${CROSS_COMPILE_TRIPLET}" \
 	--prefix="${toolchain_directory}" \
 	--with-gmp="${toolchain_directory}" \
 	--enable-shared \
 	--enable-static \
+	${cross_compile_flags} \
 	CFLAGS="${optflags}" \
 	CXXFLAGS="${optflags}" \
 	LDFLAGS="${linkflags}"
@@ -133,7 +153,6 @@ cd "${binutils_directory}/build"
 rm --force --recursive ./*
 
 ../configure \
-	--host="${CROSS_COMPILE_TRIPLET}" \
 	--target="${triplet}" \
 	--prefix="${toolchain_directory}" \
 	--enable-gold \
@@ -141,6 +160,7 @@ rm --force --recursive ./*
 	--enable-lto \
 	--disable-gprofng \
 	--with-static-standard-libraries \
+	${cross_compile_flags} \
 	CFLAGS="${optflags}" \
 	CXXFLAGS="${optflags}" \
 	LDFLAGS="${linkflags}"
@@ -154,7 +174,6 @@ cd "${gcc_directory}/build"
 rm --force --recursive ./*
 
 ../configure \
-	--host="${CROSS_COMPILE_TRIPLET}" \
 	--target="${triplet}" \
 	--prefix="${toolchain_directory}" \
 	--with-gmp="${toolchain_directory}" \
@@ -165,6 +184,7 @@ rm --force --recursive ./*
 	--with-pkgversion="Venti v0.3-${revision}" \
 	--with-sysroot="${toolchain_directory}/${triplet}" \
 	--with-native-system-header-dir='/include' \
+	--includedir="${toolchain_directory}/${triplet}/include" \
 	--enable-__cxa_atexit \
 	--enable-cet='auto' \
 	--enable-checking='release' \
@@ -189,6 +209,7 @@ rm --force --recursive ./*
 	--disable-multilib \
 	--disable-nls \
 	--without-headers \
+	${cross_compile_flags} \
 	CFLAGS="${optflags}" \
 	CXXFLAGS="${optflags}" \
 	LDFLAGS="-Wl,-rpath-link,${OBGGCC_TOOLCHAIN}/${CROSS_COMPILE_TRIPLET}/lib ${linkflags}"
