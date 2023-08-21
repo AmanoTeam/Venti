@@ -17,7 +17,7 @@ declare -r binutils_tarball='/tmp/binutils.tar.xz'
 declare -r binutils_directory='/tmp/binutils-2.40'
 
 declare -r gcc_tarball='/tmp/gcc.tar.gz'
-declare -r gcc_directory='/tmp/gcc-master'
+declare -r gcc_directory='/tmp/gcc-13.2.0'
 
 declare -r system_image='/tmp/dragonflybsd.iso'
 declare -r system_image_compressed='/tmp/dragonflybsd.iso.bz2'
@@ -66,7 +66,7 @@ tar --directory="$(dirname "${mpc_directory}")" --extract --file="${mpc_tarball}
 wget --no-verbose 'https://ftp.gnu.org/gnu/binutils/binutils-2.40.tar.xz' --output-document="${binutils_tarball}"
 tar --directory="$(dirname "${binutils_directory}")" --extract --file="${binutils_tarball}"
 
-wget --no-verbose 'https://codeload.github.com/gcc-mirror/gcc/tar.gz/refs/heads/master' --output-document="${gcc_tarball}"
+wget --no-verbose 'https://mirrors.kernel.org/gnu/gcc/gcc-13.2.0/gcc-13.2.0.tar.xz' --output-document="${gcc_tarball}"
 tar --directory="$(dirname "${gcc_directory}")" --extract --file="${gcc_tarball}"
 
 wget --no-verbose 'https://mirror-master.dragonflybsd.org/iso-images/dfly-x86_64-5.0.0_REL.iso.bz2'  --output-document="${system_image_compressed}"
@@ -160,6 +160,7 @@ rm --force --recursive ./*
 	--enable-lto \
 	--disable-gprofng \
 	--with-static-standard-libraries \
+	--with-sysroot="${toolchain_directory}/${triplet}" \
 	${cross_compile_flags} \
 	CFLAGS="${optflags}" \
 	CXXFLAGS="${optflags}" \
@@ -181,7 +182,7 @@ rm --force --recursive ./*
 	--with-mpfr="${toolchain_directory}" \
 	--with-bugurl='https://github.com/AmanoTeam/Venti/issues' \
 	--with-gcc-major-version-only \
-	--with-pkgversion="Venti v0.3-${revision}" \
+	--with-pkgversion="Venti v0.4-${revision}" \
 	--with-sysroot="${toolchain_directory}/${triplet}" \
 	--with-native-system-header-dir='/include' \
 	--includedir="${toolchain_directory}/${triplet}/include" \
