@@ -28,10 +28,13 @@ declare -r gcc_directory='/tmp/gcc-master'
 declare -r triplet='x86_64-unknown-dragonfly'
 declare -r sysroot_url="https://github.com/AmanoTeam/dragonfly-sysroot/releases/latest/download/${triplet}.tar.xz"
 
-declare -r optflags='-w -Os'
-declare -r linkflags='-Wl,-s'
+declare -r max_jobs='40'
 
-declare -r max_jobs="$(($(nproc) * 17))"
+declare -r optlto="-flto=${max_jobs} -fno-fat-lto-objects"
+declare -r optfatlto="-flto=${max_jobs} -ffat-lto-objects"
+
+declare -r optflags='-w -O2'
+declare -r linkflags='-Wl,-s'
 
 declare build_type="${1}"
 
@@ -45,38 +48,100 @@ if [ "${build_type}" == 'native' ]; then
 	is_native='1'
 fi
 
-declare cross_compile_flags=''
+set +u
 
-if ! (( is_native )); then
-	cross_compile_flags+="--host=${CROSS_COMPILE_TRIPLET}"
+if [ -z "${CROSS_COMPILE_TRIPLET}" ]; then
+	declare CROSS_COMPILE_TRIPLET=''
 fi
 
+set -u
+
 if ! [ -f "${gmp_tarball}" ]; then
-	wget --no-verbose 'https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz' --output-document="${gmp_tarball}"
-	tar --directory="$(dirname "${gmp_directory}")" --extract --file="${gmp_tarball}"
+	curl \
+		--url 'https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz' \
+		--retry '30' \
+		--retry-all-errors \
+		--retry-delay '0' \
+		--retry-max-time '0' \
+		--location \
+		--silent \
+		--output "${gmp_tarball}"
+	
+	tar \
+		--directory="$(dirname "${gmp_directory}")" \
+		--extract \
+		--file="${gmp_tarball}"
 fi
 
 if ! [ -f "${mpfr_tarball}" ]; then
-	wget --no-verbose 'https://ftp.gnu.org/gnu/mpfr/mpfr-4.2.1.tar.xz' --output-document="${mpfr_tarball}"
-	tar --directory="$(dirname "${mpfr_directory}")" --extract --file="${mpfr_tarball}"
+	curl \
+		--url 'https://ftp.gnu.org/gnu/mpfr/mpfr-4.2.1.tar.xz' \
+		--retry '30' \
+		--retry-all-errors \
+		--retry-delay '0' \
+		--retry-max-time '0' \
+		--location \
+		--silent \
+		--output "${mpfr_tarball}"
+	
+	tar \
+		--directory="$(dirname "${mpfr_directory}")" \
+		--extract \
+		--file="${mpfr_tarball}"
 fi
 
 if ! [ -f "${mpc_tarball}" ]; then
-	wget --no-verbose 'https://ftp.gnu.org/gnu/mpc/mpc-1.3.1.tar.gz' --output-document="${mpc_tarball}"
-	tar --directory="$(dirname "${mpc_directory}")" --extract --file="${mpc_tarball}"
+	curl \
+		--url 'https://ftp.gnu.org/gnu/mpc/mpc-1.3.1.tar.gz' \
+		--retry '30' \
+		--retry-all-errors \
+		--retry-delay '0' \
+		--retry-max-time '0' \
+		--location \
+		--silent \
+		--output "${mpc_tarball}"
+	
+	tar \
+		--directory="$(dirname "${mpc_directory}")" \
+		--extract \
+		--file="${mpc_tarball}"
 fi
 
 if ! [ -f "${binutils_tarball}" ]; then
-	wget --no-verbose 'https://ftp.gnu.org/gnu/binutils/binutils-with-gold-2.44.tar.xz' --output-document="${binutils_tarball}"
-	tar --directory="$(dirname "${binutils_directory}")" --extract --file="${binutils_tarball}"
+	curl \
+		--url 'https://ftp.gnu.org/gnu/binutils/binutils-with-gold-2.44.tar.xz' \
+		--retry '30' \
+		--retry-all-errors \
+		--retry-delay '0' \
+		--retry-max-time '0' \
+		--location \
+		--silent \
+		--output "${binutils_tarball}"
+	
+	tar \
+		--directory="$(dirname "${binutils_directory}")" \
+		--extract \
+		--file="${binutils_tarball}"
 	
 	patch --directory="${binutils_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0001-Revert-gold-Use-char16_t-char32_t-instead-of-uint16_.patch"
 	patch --directory="${binutils_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0001-Disable-annoying-linker-warnings.patch"
 fi
 
 if ! [ -f "${gcc_tarball}" ]; then
-	wget --no-verbose 'https://github.com/gcc-mirror/gcc/archive/refs/heads/master.tar.gz' --output-document="${gcc_tarball}"
-	tar --directory="$(dirname "${gcc_directory}")" --extract --file="${gcc_tarball}"
+	curl \
+		--url 'https://github.com/gcc-mirror/gcc/archive/refs/heads/master.tar.gz' \
+		--retry '30' \
+		--retry-all-errors \
+		--retry-delay '0' \
+		--retry-max-time '0' \
+		--location \
+		--silent \
+		--output "${gcc_tarball}"
+	
+	tar \
+		--directory="$(dirname "${gcc_directory}")" \
+		--extract \
+		--file="${gcc_tarball}"
 	
 	patch --directory="${gcc_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0001-Fix-libgcc-build-on-arm.patch"
 	patch --directory="${gcc_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0001-Change-the-default-language-version-for-C-compilatio.patch"
@@ -90,13 +155,13 @@ fi
 cd "${gmp_directory}/build"
 
 ../configure \
+	--host="${CROSS_COMPILE_TRIPLET}" \
 	--prefix="${toolchain_directory}" \
 	--enable-shared \
 	--enable-static \
-	${cross_compile_flags} \
-	CFLAGS="${optflags}" \
-	CXXFLAGS="${optflags}" \
-	LDFLAGS="${linkflags}"
+	CFLAGS="${optflags} ${optlto}" \
+	CXXFLAGS="${optflags} ${optlto}" \
+	LDFLAGS="${linkflags} ${optlto}"
 
 make all --jobs
 make install
@@ -106,14 +171,14 @@ make install
 cd "${mpfr_directory}/build"
 
 ../configure \
+	--host="${CROSS_COMPILE_TRIPLET}" \
 	--prefix="${toolchain_directory}" \
 	--with-gmp="${toolchain_directory}" \
 	--enable-shared \
 	--enable-static \
-	${cross_compile_flags} \
-	CFLAGS="${optflags}" \
-	CXXFLAGS="${optflags}" \
-	LDFLAGS="${linkflags}"
+	CFLAGS="${optflags} ${optlto} -I${toolchain_directory}/include -L${toolchain_directory}/lib" \
+	CXXFLAGS="${optflags} ${optlto} -I${toolchain_directory}/include -L${toolchain_directory}/lib" \
+	LDFLAGS="${linkflags} ${optlto}"
 
 make all --jobs
 make install
@@ -123,14 +188,14 @@ make install
 cd "${mpc_directory}/build"
 
 ../configure \
+	--host="${CROSS_COMPILE_TRIPLET}" \
 	--prefix="${toolchain_directory}" \
 	--with-gmp="${toolchain_directory}" \
 	--enable-shared \
 	--enable-static \
-	${cross_compile_flags} \
-	CFLAGS="${optflags}" \
-	CXXFLAGS="${optflags}" \
-	LDFLAGS="${linkflags}"
+	CFLAGS="${optflags} ${optlto}" \
+	CXXFLAGS="${optflags} ${optlto}" \
+	LDFLAGS="${linkflags} ${optlto}"
 
 make all --jobs
 make install
@@ -141,6 +206,7 @@ cd "${binutils_directory}/build"
 rm --force --recursive ./*
 
 ../configure \
+	--host="${CROSS_COMPILE_TRIPLET}" \
 	--target="${triplet}" \
 	--prefix="${toolchain_directory}" \
 	--enable-gold \
@@ -149,10 +215,9 @@ rm --force --recursive ./*
 	--disable-gprofng \
 	--with-static-standard-libraries \
 	--with-sysroot="${toolchain_directory}/${triplet}" \
-	${cross_compile_flags} \
-	CFLAGS="${optflags}" \
-	CXXFLAGS="${optflags}" \
-	LDFLAGS="${linkflags}"
+	CFLAGS="${optflags} ${optlto}" \
+	CXXFLAGS="${optflags} ${optlto}" \
+	LDFLAGS="${linkflags} ${optlto}"
 
 make all --jobs="${max_jobs}"
 make install
@@ -186,6 +251,7 @@ cd "${gcc_directory}/build"
 rm --force --recursive ./*
 
 ../configure \
+	--host="${CROSS_COMPILE_TRIPLET}" \
 	--target="${triplet}" \
 	--prefix="${toolchain_directory}" \
 	--with-gmp="${toolchain_directory}" \
@@ -193,7 +259,7 @@ rm --force --recursive ./*
 	--with-mpfr="${toolchain_directory}" \
 	--with-bugurl='https://github.com/AmanoTeam/Venti/issues' \
 	--with-gcc-major-version-only \
-	--with-pkgversion="Venti v0.6-${revision}" \
+	--with-pkgversion="Venti v0.7-${revision}" \
 	--with-sysroot="${toolchain_directory}/${triplet}" \
 	--with-native-system-header-dir='/include' \
 	--includedir="${toolchain_directory}/${triplet}/include" \
@@ -224,10 +290,9 @@ rm --force --recursive ./*
 	--disable-multilib \
 	--disable-nls \
 	--without-headers \
-	${cross_compile_flags} \
-	CFLAGS="${optflags}" \
-	CXXFLAGS="${optflags}" \
-	LDFLAGS="${linkflags}"
+	CFLAGS="${optflags} ${optfatlto}" \
+	CXXFLAGS="${optflags} ${optfatlto}" \
+	LDFLAGS="${linkflags} ${optfatlto}"
 
 declare args=''
 
