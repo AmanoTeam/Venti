@@ -3,6 +3,7 @@
 set -eu
 
 declare -r workdir="${PWD}"
+
 declare -r toolchain_directory='/tmp/venti'
 declare -r share_directory="${toolchain_directory}/usr/local/share/venti"
 
@@ -19,6 +20,9 @@ declare -r mpfr_directory='/tmp/mpfr-4.2.1'
 declare -r mpc_tarball='/tmp/mpc.tar.gz'
 declare -r mpc_directory='/tmp/mpc-1.3.1'
 
+declare -r isl_tarball='/tmp/isl.tar.xz'
+declare -r isl_directory='/tmp/isl-0.27'
+
 declare -r binutils_tarball='/tmp/binutils.tar.xz'
 declare -r binutils_directory='/tmp/binutils-with-gold-2.44'
 
@@ -33,6 +37,7 @@ declare -r max_jobs='40'
 declare -r optlto="-flto=${max_jobs} -fno-fat-lto-objects"
 declare -r optfatlto="-flto=${max_jobs} -ffat-lto-objects"
 
+declare -r pieflags='-fPIE'
 declare -r optflags='-w -O2'
 declare -r linkflags='-Wl,-s'
 
@@ -107,6 +112,23 @@ if ! [ -f "${mpc_tarball}" ]; then
 		--file="${mpc_tarball}"
 fi
 
+if ! [ -f "${isl_tarball}" ]; then
+	curl \
+		--url 'https://libisl.sourceforge.io/isl-0.27.tar.xz' \
+		--retry '30' \
+		--retry-all-errors \
+		--retry-delay '0' \
+		--retry-max-time '0' \
+		--location \
+		--silent \
+		--output "${isl_tarball}"
+	
+	tar \
+		--directory="$(dirname "${isl_directory}")" \
+		--extract \
+		--file="${isl_tarball}"
+fi
+
 if ! [ -f "${binutils_tarball}" ]; then
 	curl \
 		--url 'https://ftp.gnu.org/gnu/binutils/binutils-with-gold-2.44.tar.xz' \
@@ -176,8 +198,8 @@ cd "${mpfr_directory}/build"
 	--with-gmp="${toolchain_directory}" \
 	--enable-shared \
 	--enable-static \
-	CFLAGS="${optflags} ${optlto} -I${toolchain_directory}/include -L${toolchain_directory}/lib" \
-	CXXFLAGS="${optflags} ${optlto} -I${toolchain_directory}/include -L${toolchain_directory}/lib" \
+	CFLAGS="${optflags} ${optlto}" \
+	CXXFLAGS="${optflags} ${optlto}" \
 	LDFLAGS="${linkflags} ${optlto}"
 
 make all --jobs
@@ -196,6 +218,24 @@ cd "${mpc_directory}/build"
 	CFLAGS="${optflags} ${optlto}" \
 	CXXFLAGS="${optflags} ${optlto}" \
 	LDFLAGS="${linkflags} ${optlto}"
+
+make all --jobs
+make install
+
+[ -d "${isl_directory}/build" ] || mkdir "${isl_directory}/build"
+
+cd "${isl_directory}/build"
+rm --force --recursive ./*
+
+../configure \
+	--host="${CROSS_COMPILE_TRIPLET}" \
+	--prefix="${toolchain_directory}" \
+	--with-gmp-prefix="${toolchain_directory}" \
+	--enable-shared \
+	--enable-static \
+	CFLAGS="${pieflags} ${optflags}" \
+	CXXFLAGS="${pieflags} ${optflags}" \
+	LDFLAGS="-Wl,-rpath-link -Wl,${toolchain_directory}/lib ${linkflags}"
 
 make all --jobs
 make install
@@ -257,15 +297,18 @@ rm --force --recursive ./*
 	--with-gmp="${toolchain_directory}" \
 	--with-mpc="${toolchain_directory}" \
 	--with-mpfr="${toolchain_directory}" \
+	--with-isl="${toolchain_directory}" \
 	--with-bugurl='https://github.com/AmanoTeam/Venti/issues' \
 	--with-gcc-major-version-only \
 	--with-pkgversion="Venti v0.7-${revision}" \
 	--with-sysroot="${toolchain_directory}/${triplet}" \
 	--with-native-system-header-dir='/include' \
+	--with-default-libstdcxx-abi='new' \
 	--includedir="${toolchain_directory}/${triplet}/include" \
 	--enable-__cxa_atexit \
 	--enable-cet='auto' \
 	--enable-checking='release' \
+	--enable-default-pie \
 	--enable-default-ssp \
 	--enable-gnu-indirect-function \
 	--enable-gnu-unique-object \
@@ -280,7 +323,7 @@ rm --force --recursive ./*
 	--enable-languages='c,c++' \
 	--enable-ld \
 	--enable-gold \
-	--disable-plugin \
+	--enable-libstdcxx-time='yes' \
 	--disable-libsanitizer \
 	--disable-fixincludes \
 	--disable-libstdcxx-pch \
