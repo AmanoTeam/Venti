@@ -15,7 +15,7 @@ declare -r gmp_tarball='/tmp/gmp.tar.xz'
 declare -r gmp_directory='/tmp/gmp-6.3.0'
 
 declare -r mpfr_tarball='/tmp/mpfr.tar.xz'
-declare -r mpfr_directory='/tmp/mpfr-4.2.1'
+declare -r mpfr_directory='/tmp/mpfr-4.2.2'
 
 declare -r mpc_tarball='/tmp/mpc.tar.gz'
 declare -r mpc_directory='/tmp/mpc-1.3.1'
@@ -83,7 +83,7 @@ fi
 
 if ! [ -f "${mpfr_tarball}" ]; then
 	curl \
-		--url 'https://ftp.gnu.org/gnu/mpfr/mpfr-4.2.1.tar.xz' \
+		--url 'https://ftp.gnu.org/gnu/mpfr/mpfr-4.2.2.tar.xz' \
 		--retry '30' \
 		--retry-all-errors \
 		--retry-delay '0' \
@@ -316,6 +316,10 @@ rm --force --recursive ./*
 	--enable-gnu-indirect-function \
 	--enable-gnu-unique-object \
 	--enable-libstdcxx-backtrace \
+	--enable-libstdcxx-filesystem-ts \
+	--enable-libstdcxx-static-eh-pool \
+	--with-libstdcxx-zoneinfo='static' \
+	--with-libstdcxx-lock-policy='auto' \
 	--enable-link-serialization='1' \
 	--enable-linker-build-id \
 	--enable-lto \
@@ -326,7 +330,10 @@ rm --force --recursive ./*
 	--enable-languages='c,c++' \
 	--enable-ld \
 	--enable-gold \
-	--enable-libstdcxx-time='yes' \
+	--enable-cxx-flags="${linkflags}" \
+	--enable-host-pie \
+	--enable-host-shared \
+	--with-specs='%{!fno-plt:%{!fplt:-fno-plt}}' \
 	--disable-libsanitizer \
 	--disable-fixincludes \
 	--disable-libstdcxx-pch \
@@ -351,6 +358,12 @@ env ${args} make \
 	CXXFLAGS_FOR_TARGET="${optflags} ${linkflags}" \
 	all --jobs="${max_jobs}"
 make install
+
+cd "${toolchain_directory}/lib/bfd-plugins"
+
+if ! [ -f './liblto_plugin.so' ]; then
+	ln --symbolic "../../libexec/gcc/${triplet}/"*'/liblto_plugin.so' './'
+fi
 
 cd "${toolchain_directory}/${triplet}/bin"
 
