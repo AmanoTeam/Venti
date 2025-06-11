@@ -34,8 +34,8 @@ declare -r sysroot_url="https://github.com/AmanoTeam/dragonfly-sysroot/releases/
 
 declare -r max_jobs='40'
 
-declare -r optlto="-flto=${max_jobs} -fno-fat-lto-objects"
-declare -r optfatlto="-flto=${max_jobs} -ffat-lto-objects"
+# declare -r optlto="-flto=${max_jobs} -fno-fat-lto-objects"
+# declare -r optfatlto="-flto=${max_jobs} -ffat-lto-objects"
 
 declare -r optlto=""
 declare -r optfatlto=""
