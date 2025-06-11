@@ -41,8 +41,8 @@ declare -r optlto=""
 declare -r optfatlto=""
 
 declare -r pieflags='-fPIE'
-declare -r optflags='-w -O2'
-declare -r linkflags='-Wl,-s'
+declare -r optflags='-w -Os -Xlinker --allow-multiple-definition'
+declare -r linkflags='-Xlinker -s'
 
 declare build_type="${1}"
 
@@ -183,7 +183,7 @@ cd "${gmp_directory}/build"
 	--host="${CROSS_COMPILE_TRIPLET}" \
 	--prefix="${toolchain_directory}" \
 	--enable-shared \
-	--enable-static \
+	--disable-static \
 	CFLAGS="${optflags} ${optlto}" \
 	CXXFLAGS="${optflags} ${optlto}" \
 	LDFLAGS="${linkflags} ${optlto}"
@@ -200,7 +200,7 @@ cd "${mpfr_directory}/build"
 	--prefix="${toolchain_directory}" \
 	--with-gmp="${toolchain_directory}" \
 	--enable-shared \
-	--enable-static \
+	--disable-static \
 	CFLAGS="${optflags} ${optlto}" \
 	CXXFLAGS="${optflags} ${optlto}" \
 	LDFLAGS="${linkflags} ${optlto}"
@@ -217,7 +217,7 @@ cd "${mpc_directory}/build"
 	--prefix="${toolchain_directory}" \
 	--with-gmp="${toolchain_directory}" \
 	--enable-shared \
-	--enable-static \
+	--disable-static \
 	CFLAGS="${optflags} ${optlto}" \
 	CXXFLAGS="${optflags} ${optlto}" \
 	LDFLAGS="${linkflags} ${optlto}"
@@ -235,10 +235,10 @@ rm --force --recursive ./*
 	--prefix="${toolchain_directory}" \
 	--with-gmp-prefix="${toolchain_directory}" \
 	--enable-shared \
-	--enable-static \
+	--disable-static \
 	CFLAGS="${pieflags} ${optflags}" \
 	CXXFLAGS="${pieflags} ${optflags}" \
-	LDFLAGS="-Wl,-rpath-link -Wl,${toolchain_directory}/lib ${linkflags}"
+	LDFLAGS="-Xlinker -rpath-link -Xlinker ${toolchain_directory}/lib ${linkflags}"
 
 make all --jobs
 make install
