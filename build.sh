@@ -183,7 +183,7 @@ cd "${gmp_directory}/build"
 	--host="${CROSS_COMPILE_TRIPLET}" \
 	--prefix="${toolchain_directory}" \
 	--enable-shared \
-	--disable-static \
+	--enable-static \
 	CFLAGS="${optflags} ${optlto}" \
 	CXXFLAGS="${optflags} ${optlto}" \
 	LDFLAGS="${linkflags} ${optlto}"
