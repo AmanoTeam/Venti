@@ -243,6 +243,8 @@ rm --force --recursive ./*
 make all --jobs
 make install
 
+declare extra_configure_flags=''
+
 [ -d "${binutils_directory}/build" ] || mkdir "${binutils_directory}/build"
 
 cd "${binutils_directory}/build"
@@ -288,6 +290,10 @@ cp --recursive "${sysroot_directory}" "${toolchain_directory}"
 
 rm --force --recursive "${PWD}"
 
+if ! (( is_native )); then
+	declare extra_configure_flags+=' --enable-default-pie'
+fi
+
 [ -d "${gcc_directory}/build" ] || mkdir "${gcc_directory}/build"
 
 cd "${gcc_directory}/build"
@@ -311,7 +317,6 @@ rm --force --recursive ./*
 	--enable-__cxa_atexit \
 	--enable-cet='auto' \
 	--enable-checking='release' \
-	--enable-default-pie \
 	--enable-default-ssp \
 	--enable-gnu-indirect-function \
 	--enable-gnu-unique-object \
@@ -343,6 +348,7 @@ rm --force --recursive ./*
 	--disable-multilib \
 	--disable-nls \
 	--without-headers \
+	${extra_configure_flags} \
 	CFLAGS="${optflags} ${optfatlto}" \
 	CXXFLAGS="${optflags} ${optfatlto}" \
 	LDFLAGS="${linkflags} ${optfatlto}"
