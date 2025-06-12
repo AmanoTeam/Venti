@@ -200,7 +200,7 @@ cd "${mpfr_directory}/build"
 	--prefix="${toolchain_directory}" \
 	--with-gmp="${toolchain_directory}" \
 	--enable-shared \
-	--disable-static \
+	--enable-static \
 	CFLAGS="${optflags} ${optlto}" \
 	CXXFLAGS="${optflags} ${optlto}" \
 	LDFLAGS="${linkflags} ${optlto}"
@@ -217,7 +217,7 @@ cd "${mpc_directory}/build"
 	--prefix="${toolchain_directory}" \
 	--with-gmp="${toolchain_directory}" \
 	--enable-shared \
-	--disable-static \
+	--enable-static \
 	CFLAGS="${optflags} ${optlto}" \
 	CXXFLAGS="${optflags} ${optlto}" \
 	LDFLAGS="${linkflags} ${optlto}"
@@ -235,7 +235,7 @@ rm --force --recursive ./*
 	--prefix="${toolchain_directory}" \
 	--with-gmp-prefix="${toolchain_directory}" \
 	--enable-shared \
-	--disable-static \
+	--enable-static \
 	CFLAGS="${pieflags} ${optflags}" \
 	CXXFLAGS="${pieflags} ${optflags}" \
 	LDFLAGS="-Xlinker -rpath-link -Xlinker ${toolchain_directory}/lib ${linkflags}"
