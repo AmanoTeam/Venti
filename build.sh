@@ -41,7 +41,7 @@ declare -r optlto=""
 declare -r optfatlto=""
 
 declare -r pieflags='-fPIE'
-declare -r optflags='-w -Os -Xlinker --allow-multiple-definition'
+declare -r optflags='-w -Os -Xlinker --allow-multiple-definition -fpic -pie'
 declare -r linkflags='-Xlinker -s'
 
 declare build_type="${1}"
