@@ -110,8 +110,6 @@ jobs:
           'riscv64-unknown-serenity',
           
           # NetBSD
-          'armv7-unknown-netbsdelf-eabihf',
-          'aarch64-unknown-netbsd',
           'i386-unknown-netbsdelf',
           'x86_64-unknown-netbsd',
           
