@@ -245,6 +245,8 @@ make install
 
 declare extra_configure_flags=''
 
+export ac_cv_func_ffsll=yes
+
 [ -d "${binutils_directory}/build" ] || mkdir "${binutils_directory}/build"
 
 cd "${binutils_directory}/build"
