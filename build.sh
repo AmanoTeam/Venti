@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -eu
-export gcc_cv_ld_clearcap=no
+
 declare -r workdir="${PWD}"
 
 declare -r toolchain_directory='/tmp/venti'
