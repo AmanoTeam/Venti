@@ -243,7 +243,7 @@ rm --force --recursive ./*
 make all --jobs
 make install
 
-echo '#!/bin/bash\n\n/usr/bin/ln --symbolic --relative ${@}' > '/tmp/ln'
+echo -e '#!/bin/bash\n\n/usr/bin/ln --symbolic --relative ${@}\n' > '/tmp/ln'
 chmod +x '/tmp/ln'
 export PATH="/tmp:${PATH}"
 
