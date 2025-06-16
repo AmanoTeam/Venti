@@ -175,11 +175,6 @@ if ! [ -f "${gcc_tarball}" ]; then
 	patch --directory="${gcc_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0001-Revert-GCC-change-about-turning-Wimplicit-function-d.patch"
 fi
 
-sed --in-place 's/LN = @LN@/LN = @LN_S@/g' \
-	"${gcc_directory}/Makefile.in" \
-	"${gcc_directory}/gcc/Makefile.in" \
-	"${binutils_directory}/Makefile.in"
-
 [ -d "${gmp_directory}/build" ] || mkdir "${gmp_directory}/build"
 
 cd "${gmp_directory}/build"
@@ -247,6 +242,10 @@ rm --force --recursive ./*
 
 make all --jobs
 make install
+
+echo '#!/bin/bash\n\n/usr/bin/ln --symbolic --relative ${@}' > '/tmp/ln'
+chmod +x '/tmp/ln'
+export PATH="/tmp:${PATH}"
 
 declare extra_configure_flags=''
 
