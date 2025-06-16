@@ -371,6 +371,13 @@ env ${args} make \
 	all --jobs="${max_jobs}"
 make install
 
+ln \
+	--symbolic \
+	--relative \
+	--force \
+	"${toolchain_directory}/${triplet}/lib/libgcc_s.so.1" \
+	"${toolchain_directory}/${triplet}/lib/libgcc_s.so"
+
 cd "${toolchain_directory}/lib/bfd-plugins"
 
 if ! [ -f './liblto_plugin.so' ]; then
