@@ -296,10 +296,6 @@ cp --recursive "${sysroot_directory}" "${toolchain_directory}"
 
 rm --force --recursive "${PWD}"
 
-if ! (( is_native )); then
-	declare extra_configure_flags+=' --enable-default-pie'
-fi
-
 [ -d "${gcc_directory}/build" ] || mkdir "${gcc_directory}/build"
 
 cd "${gcc_directory}/build"
@@ -323,6 +319,7 @@ rm --force --recursive ./*
 	--enable-__cxa_atexit \
 	--enable-cet='auto' \
 	--enable-checking='release' \
+	--disable-default-pie \
 	--enable-default-ssp \
 	--enable-gnu-indirect-function \
 	--enable-gnu-unique-object \
