@@ -34,11 +34,8 @@ declare -r sysroot_url="https://github.com/AmanoTeam/dragonfly-sysroot/releases/
 
 declare -r max_jobs='40'
 
-# declare -r optlto="-flto=${max_jobs} -fno-fat-lto-objects"
-# declare -r optfatlto="-flto=${max_jobs} -ffat-lto-objects"
-
-declare -r optlto=""
-declare -r optfatlto=""
+declare -r optlto="-flto=${max_jobs} -fno-fat-lto-objects"
+declare -r optfatlto="-flto=${max_jobs} -ffat-lto-objects"
 
 declare -r pieflags='-fPIE'
 declare -r optflags='-w -Os -Xlinker --allow-multiple-definition -fplt'
@@ -207,6 +204,8 @@ cd "${mpfr_directory}/build"
 
 make all --jobs
 make install
+
+patchelf --remove-rpath "${toolchain_directory}/lib/libmpfr.so"
 
 [ -d "${mpc_directory}/build" ] || mkdir "${mpc_directory}/build"
 
