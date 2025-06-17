@@ -205,8 +205,6 @@ cd "${mpfr_directory}/build"
 make all --jobs
 make install
 
-patchelf --remove-rpath "${toolchain_directory}/lib/libmpfr.so"
-
 [ -d "${mpc_directory}/build" ] || mkdir "${mpc_directory}/build"
 
 cd "${mpc_directory}/build"
@@ -242,13 +240,24 @@ rm --force --recursive ./*
 make all --jobs
 make install
 
-echo -e '#!/bin/bash\n\n/usr/bin/ln --symbolic --relative ${@}\n' > '/tmp/ln'
+# mpfr, mpc, and isl hardcode the install prefix as RPATH during installation.
+patchelf \
+	--remove-rpath \
+	"${toolchain_directory}/lib/libmpfr.so" \
+	"${toolchain_directory}/lib/libmpc.so" \
+	"${toolchain_directory}/lib/libisl.so"
+
+# Always use symlinks unconditionally to ensure compatibility with filesystems that don't support hard links.
+echo -e '#!/bin/bash\n\n/usr/bin/ln --symbolic --relative "${@}"\n' > '/tmp/ln'
 chmod +x '/tmp/ln'
 export PATH="/tmp:${PATH}"
 
-declare extra_configure_flags=''
+# The gold linker incorrectly detects ffsll() as unsupported.
+if [[ "${CROSS_COMPILE_TRIPLET}" == *'-android'* ]]; then
+	export ac_cv_func_ffsll=yes
+fi
 
-export ac_cv_func_ffsll=yes
+declare extra_configure_flags=''
 
 [ -d "${binutils_directory}/build" ] || mkdir "${binutils_directory}/build"
 
@@ -351,9 +360,9 @@ rm --force --recursive ./*
 	--disable-nls \
 	--without-headers \
 	${extra_configure_flags} \
-	CFLAGS="${optflags} ${optfatlto}" \
-	CXXFLAGS="${optflags} ${optfatlto}" \
-	LDFLAGS="${linkflags} ${optfatlto}"
+	CFLAGS="${optflags} ${optlto}" \
+	CXXFLAGS="${optflags} ${optlto}" \
+	LDFLAGS="${linkflags} ${optlto}"
 
 declare args=''
 
