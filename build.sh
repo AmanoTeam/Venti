@@ -367,7 +367,6 @@ rm --force --recursive ./*
 	--host="${CROSS_COMPILE_TRIPLET}" \
 	--target="${triplet}" \
 	--prefix="${toolchain_directory}" \
-	--with-linker-hash-style='both' \
 	--with-gmp="${toolchain_directory}" \
 	--with-mpc="${toolchain_directory}" \
 	--with-mpfr="${toolchain_directory}" \
