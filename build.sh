@@ -29,16 +29,16 @@ declare -r binutils_directory='/tmp/binutils-with-gold-2.44'
 declare -r gcc_tarball='/tmp/gcc.tar.xz'
 declare -r gcc_directory='/tmp/gcc-master'
 
+declare -r zstd_tarball='/tmp/zstd.tar.gz'
+declare -r zstd_directory='/tmp/zstd-dev'
+
 declare -r triplet='x86_64-unknown-dragonfly'
 declare -r sysroot_url="https://github.com/AmanoTeam/dragonfly-sysroot/releases/latest/download/${triplet}.tar.xz"
 
 declare -r max_jobs='40'
 
-declare -r optlto="-flto=${max_jobs} -fno-fat-lto-objects"
-declare -r optfatlto="-flto=${max_jobs} -ffat-lto-objects"
-
 declare -r pieflags='-fPIE'
-declare -r optflags='-w -Os -Xlinker --allow-multiple-definition -fplt'
+declare -r optflags='-w -O2 -Xlinker --allow-multiple-definition -fplt'
 declare -r linkflags='-Xlinker -s'
 
 declare build_type="${1}"
@@ -49,7 +49,7 @@ fi
 
 declare is_native='0'
 
-if [ "${build_type}" == 'native' ]; then
+if [ "${build_type}" = 'native' ]; then
 	is_native='1'
 fi
 
@@ -76,6 +76,8 @@ if ! [ -f "${gmp_tarball}" ]; then
 		--directory="$(dirname "${gmp_directory}")" \
 		--extract \
 		--file="${gmp_tarball}"
+	
+	patch --directory="${gmp_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0001-Remove-hardcoded-RPATH-and-versioned-SONAME-from-libgmp.patch"
 fi
 
 if ! [ -f "${mpfr_tarball}" ]; then
@@ -93,6 +95,8 @@ if ! [ -f "${mpfr_tarball}" ]; then
 		--directory="$(dirname "${mpfr_directory}")" \
 		--extract \
 		--file="${mpfr_tarball}"
+	
+	patch --directory="${mpfr_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0001-Remove-hardcoded-RPATH-and-versioned-SONAME-from-libmpfr.patch"
 fi
 
 if ! [ -f "${mpc_tarball}" ]; then
@@ -110,6 +114,8 @@ if ! [ -f "${mpc_tarball}" ]; then
 		--directory="$(dirname "${mpc_directory}")" \
 		--extract \
 		--file="${mpc_tarball}"
+	
+	patch --directory="${mpc_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0001-Remove-hardcoded-RPATH-and-versioned-SONAME-from-libmpc.patch"
 fi
 
 if ! [ -f "${isl_tarball}" ]; then
@@ -127,6 +133,25 @@ if ! [ -f "${isl_tarball}" ]; then
 		--directory="$(dirname "${isl_directory}")" \
 		--extract \
 		--file="${isl_tarball}"
+	
+	patch --directory="${isl_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0001-Remove-hardcoded-RPATH-and-versioned-SONAME-from-libisl.patch"
+fi
+
+if ! [ -f "${zstd_tarball}" ]; then
+	curl \
+		--url 'https://github.com/facebook/zstd/archive/refs/heads/dev.tar.gz' \
+		--retry '30' \
+		--retry-all-errors \
+		--retry-delay '0' \
+		--retry-max-time '0' \
+		--location \
+		--silent \
+		--output "${zstd_tarball}"
+	
+	tar \
+		--directory="$(dirname "${zstd_directory}")" \
+		--extract \
+		--file="${zstd_tarball}"
 fi
 
 if ! [ -f "${binutils_tarball}" ]; then
@@ -147,6 +172,7 @@ if ! [ -f "${binutils_tarball}" ]; then
 	
 	patch --directory="${binutils_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0001-Revert-gold-Use-char16_t-char32_t-instead-of-uint16_.patch"
 	patch --directory="${binutils_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0001-Disable-annoying-linker-warnings.patch"
+	patch --directory="${binutils_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0001-Add-relative-RPATHs-to-binutils-host-tools.patch"
 fi
 
 if ! [ -f "${gcc_tarball}" ]; then
@@ -170,7 +196,20 @@ if ! [ -f "${gcc_tarball}" ]; then
 	patch --directory="${gcc_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0001-Turn-Wimplicit-int-back-into-an-warning.patch"
 	patch --directory="${gcc_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0001-Turn-Wint-conversion-back-into-an-warning.patch"
 	patch --directory="${gcc_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0001-Revert-GCC-change-about-turning-Wimplicit-function-d.patch"
+	patch --directory="${gcc_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0001-Add-relative-RPATHs-to-GCC-host-tools.patch"
 fi
+
+# Follow Debian's approach for removing hardcoded RPATH from binaries
+# https://wiki.debian.org/RpathIssue
+sed \
+	--in-place \
+	--regexp-extended \
+	's/(hardcode_into_libs)=.*$/\1=no/' \
+	"${isl_directory}/configure" \
+	"${mpc_directory}/configure" \
+	"${mpfr_directory}/configure" \
+	"${gmp_directory}/configure" \
+	"${gcc_directory}/libsanitizer/configure"
 
 [ -d "${gmp_directory}/build" ] || mkdir "${gmp_directory}/build"
 
@@ -181,9 +220,9 @@ cd "${gmp_directory}/build"
 	--prefix="${toolchain_directory}" \
 	--enable-shared \
 	--enable-static \
-	CFLAGS="${optflags} ${optlto}" \
-	CXXFLAGS="${optflags} ${optlto}" \
-	LDFLAGS="${linkflags} ${optlto}"
+	CFLAGS="${optflags}" \
+	CXXFLAGS="${optflags}" \
+	LDFLAGS="${linkflags}"
 
 make all --jobs
 make install
@@ -198,9 +237,9 @@ cd "${mpfr_directory}/build"
 	--with-gmp="${toolchain_directory}" \
 	--enable-shared \
 	--enable-static \
-	CFLAGS="${optflags} ${optlto}" \
-	CXXFLAGS="${optflags} ${optlto}" \
-	LDFLAGS="${linkflags} ${optlto}"
+	CFLAGS="${optflags}" \
+	CXXFLAGS="${optflags}" \
+	LDFLAGS="${linkflags}"
 
 make all --jobs
 make install
@@ -215,9 +254,9 @@ cd "${mpc_directory}/build"
 	--with-gmp="${toolchain_directory}" \
 	--enable-shared \
 	--enable-static \
-	CFLAGS="${optflags} ${optlto}" \
-	CXXFLAGS="${optflags} ${optlto}" \
-	LDFLAGS="${linkflags} ${optlto}"
+	CFLAGS="${optflags}" \
+	CXXFLAGS="${optflags}" \
+	LDFLAGS="${linkflags}"
 
 make all --jobs
 make install
@@ -240,19 +279,31 @@ rm --force --recursive ./*
 make all --jobs
 make install
 
-# mpfr, mpc, and isl hardcode the install prefix as RPATH during installation.
-patchelf \
-	--remove-rpath \
-	"${toolchain_directory}/lib/libmpfr.so" \
-	"${toolchain_directory}/lib/libmpc.so" \
-	"${toolchain_directory}/lib/libisl.so"
+[ -d "${zstd_directory}/.build" ] || mkdir "${zstd_directory}/.build"
 
-# Always use symlinks unconditionally to ensure compatibility with filesystems that don't support hard links.
-echo -e '#!/bin/bash\n\n/usr/bin/ln --symbolic --relative "${@}"\n' > '/tmp/ln'
-chmod +x '/tmp/ln'
+cd "${zstd_directory}/.build"
+rm --force --recursive ./*
+
+cmake \
+	-S "${zstd_directory}/build/cmake" \
+	-B "${PWD}" \
+	-DCMAKE_C_FLAGS="-DZDICT_QSORT=ZDICT_QSORT_MIN ${optflags}" \
+	-DCMAKE_INSTALL_PREFIX="${toolchain_directory}" \
+	-DBUILD_SHARED_LIBS=ON \
+	-DZSTD_BUILD_PROGRAMS=OFF \
+	-DZSTD_BUILD_TESTS=OFF \
+	-DZSTD_BUILD_STATIC=OFF \
+	-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON
+
+cmake --build "${PWD}"
+cmake --install "${PWD}" --strip
+
+# We prefer symbolic links over hard links.
+cp "${workdir}/submodules/obggcc/tools/ln.sh" '/tmp/ln'
+
 export PATH="/tmp:${PATH}"
 
-# The gold linker incorrectly detects ffsll() as unsupported.
+# The gold linker build incorrectly detects ffsll() as unsupported.
 if [[ "${CROSS_COMPILE_TRIPLET}" == *'-android'* ]]; then
 	export ac_cv_func_ffsll=yes
 fi
@@ -274,9 +325,10 @@ rm --force --recursive ./*
 	--disable-gprofng \
 	--with-static-standard-libraries \
 	--with-sysroot="${toolchain_directory}/${triplet}" \
-	CFLAGS="${optflags} ${optlto}" \
-	CXXFLAGS="${optflags} ${optlto}" \
-	LDFLAGS="${linkflags} ${optlto}"
+	--with-zstd="${toolchain_directory}" \
+	CFLAGS="${optflags}" \
+	CXXFLAGS="${optflags}" \
+	LDFLAGS="${linkflags}"
 
 make all --jobs="${max_jobs}"
 make install
@@ -313,10 +365,12 @@ rm --force --recursive ./*
 	--host="${CROSS_COMPILE_TRIPLET}" \
 	--target="${triplet}" \
 	--prefix="${toolchain_directory}" \
+	--with-linker-hash-style='both' \
 	--with-gmp="${toolchain_directory}" \
 	--with-mpc="${toolchain_directory}" \
 	--with-mpfr="${toolchain_directory}" \
 	--with-isl="${toolchain_directory}" \
+	--with-zstd="${toolchain_directory}" \
 	--with-bugurl='https://github.com/AmanoTeam/Venti/issues' \
 	--with-gcc-major-version-only \
 	--with-pkgversion="Venti v0.7-${revision}" \
@@ -360,9 +414,9 @@ rm --force --recursive ./*
 	--disable-nls \
 	--without-headers \
 	${extra_configure_flags} \
-	CFLAGS="${optflags} ${optlto}" \
-	CXXFLAGS="${optflags} ${optlto}" \
-	LDFLAGS="${linkflags} ${optlto}"
+	CFLAGS="${optflags}" \
+	CXXFLAGS="${optflags}" \
+	LDFLAGS="${linkflags}"
 
 declare args=''
 
@@ -389,11 +443,37 @@ if ! [ -f './liblto_plugin.so' ]; then
 	ln --symbolic "../../libexec/gcc/${triplet}/"*'/liblto_plugin.so' './'
 fi
 
-cd "${toolchain_directory}/${triplet}/bin"
+# Delete libtool files and other unnecessary files GCC installs
+rm --force --recursive "${toolchain_directory}/share"
 
-patchelf --add-rpath '$ORIGIN/../../../../lib' "${toolchain_directory}/libexec/gcc/${triplet}/"*"/cc1"
-patchelf --add-rpath '$ORIGIN/../../../../lib' "${toolchain_directory}/libexec/gcc/${triplet}/"*"/cc1plus"
-patchelf --add-rpath '$ORIGIN/../../../../lib' "${toolchain_directory}/libexec/gcc/${triplet}/"*"/lto1"
+find \
+	"${toolchain_directory}" \
+	-name '*.la' -delete -o \
+	-name '*.py' -delete -o \
+	-name '*.json' -delete
+
+declare cc='gcc'
+declare readelf='readelf'
+
+if ! (( is_native )); then
+	cc="${CC}"
+	readelf="${READELF}"
+fi
+
+# Bundle both libstdc++ and libgcc within host tools
+if ! (( is_native )); then
+	[ -d "${toolchain_directory}/lib" ] || mkdir "${toolchain_directory}/lib"
+	
+	declare name=$(realpath $("${cc}" --print-file-name='libstdc++.so'))
+	declare soname=$("${readelf}" -d "${name}" | grep 'SONAME' | sed --regexp-extended 's/.+\[(.+)\]/\1/g')
+	
+	cp "${name}" "${toolchain_directory}/lib/${soname}"
+	
+	declare name=$(realpath $("${cc}" --print-file-name='libgcc_s.so.1'))
+	declare soname=$("${readelf}" -d "${name}" | grep 'SONAME' | sed --regexp-extended 's/.+\[(.+)\]/\1/g')
+	
+	cp "${name}" "${toolchain_directory}/lib/${soname}"
+fi
 
 mkdir --parent "${share_directory}"
 

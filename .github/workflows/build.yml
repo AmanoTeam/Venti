@@ -77,44 +77,50 @@ jobs:
       matrix:
         target: [
           # FreeBSD
-          # 'x86_64-unknown-freebsd',
-          # 'aarch64-unknown-freebsd',
-          # 'i386-unknown-freebsd',
+          'x86_64-unknown-freebsd',
+          'aarch64-unknown-freebsd',
+          'i386-unknown-freebsd',
          
           # Linux (musl)
-          # 'aarch64-unknown-linux-musl',
-          # 'x86_64-unknown-linux-musl',
-          # 'arm-unknown-linux-musleabihf',
-          # 'i386-unknown-linux-musl',
-          # 'armv7l-unknown-linux-musleabihf',
+          'aarch64-unknown-linux-musl',
+          'x86_64-unknown-linux-musl',
+          'arm-unknown-linux-musleabihf',
+          'i386-unknown-linux-musl',
+          'armv7l-unknown-linux-musleabihf',
           
           # Linux (glibc)
-          # 'x86_64-unknown-linux-gnu',
-          # 'i386-unknown-linux-gnu',
-          # 'arm-unknown-linux-gnueabihf',
-          # 'aarch64-unknown-linux-gnu',
+          'x86_64-unknown-linux-gnu',
+          'i386-unknown-linux-gnu',
+          'arm-unknown-linux-gnueabihf',
+          'aarch64-unknown-linux-gnu',
           
           # OpenBSD
-          # 'x86_64-unknown-openbsd',
-          # 'i386-unknown-openbsd',
-          # 'arm-unknown-openbsd',
-          # 'aarch64-unknown-openbsd',
+          'x86_64-unknown-openbsd',
+          'i386-unknown-openbsd',
+          'arm-unknown-openbsd',
+          'aarch64-unknown-openbsd',
+          
+          # OpenBSD
+          'x86_64-unknown-openbsd',
+          'i386-unknown-openbsd',
+          'aarch64-unknown-openbsd',
+          'arm-unknown-openbsd',
           
           # Haiku
-          # 'i586-unknown-haiku',
-          # 'x86_64-unknown-haiku',
+          'i586-unknown-haiku',
+          'x86_64-unknown-haiku',
           
           # SerenityOS
-          # 'aarch64-unknown-serenity',
-          # 'x86_64-unknown-serenity',
-          # 'riscv64-unknown-serenity',
+          'aarch64-unknown-serenity',
+          'x86_64-unknown-serenity',
+          'riscv64-unknown-serenity',
           
           # NetBSD
-          # 'i386-unknown-netbsdelf',
-          # 'x86_64-unknown-netbsd',
+          'i386-unknown-netbsdelf',
+          'x86_64-unknown-netbsd',
           
           # DragonFly BSD
-          # 'x86_64-unknown-dragonfly',
+          'x86_64-unknown-dragonfly',
           
           # Android
           'x86_64-unknown-linux-android',
