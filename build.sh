@@ -213,6 +213,15 @@ sed \
 	"${gmp_directory}/configure" \
 	"${gcc_directory}/libsanitizer/configure"
 
+# Fix Autotools mistakenly detecting shared libraries as not supported on OpenBSD
+while read file; do
+	sed \
+		--in-place \
+		--regexp-extended \
+		's|test -f /usr/libexec/ld.so|true|g' \
+		"${file}"
+done <<< "$(find '/tmp' -type 'f' -name 'configure')"
+
 [ -d "${gmp_directory}/build" ] || mkdir "${gmp_directory}/build"
 
 cd "${gmp_directory}/build"
@@ -328,8 +337,8 @@ rm --force --recursive ./*
 	--with-static-standard-libraries \
 	--with-sysroot="${toolchain_directory}/${triplet}" \
 	--with-zstd="${toolchain_directory}" \
-	CFLAGS="${optflags}" \
-	CXXFLAGS="${optflags}" \
+	CFLAGS="${optflags} -I${toolchain_directory}/include -L${toolchain_directory}/lib" \
+	CXXFLAGS="${optflags} -I${toolchain_directory}/include -L${toolchain_directory}/lib" \
 	LDFLAGS="${linkflags}"
 
 make all --jobs="${max_jobs}"
@@ -390,7 +399,7 @@ rm --force --recursive ./*
 	--enable-libstdcxx-filesystem-ts \
 	--enable-libstdcxx-static-eh-pool \
 	--with-libstdcxx-zoneinfo='static' \
-	--with-libstdcxx-lock-policy='auto' \
+	--with-libstdcxx-lock-policy='atomic' \
 	--enable-link-serialization='1' \
 	--enable-linker-build-id \
 	--enable-lto \
