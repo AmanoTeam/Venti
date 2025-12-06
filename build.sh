@@ -625,12 +625,12 @@ if ! (( is_native )) && [[ "${CROSS_COMPILE_TRIPLET}" != *'-darwin'* ]]; then
 	
 	cp "${name}" "${toolchain_directory}/lib/${soname}"
 	
-	# libgcc_s
-	declare name=$(realpath $("${cc}" --print-file-name='libgcc_s.so.1'))
-	
 	# libegcc
+	declare name=$(realpath $("${cc}" --print-file-name='libegcc.so'))
+	
 	if ! [ -f "${name}" ]; then
-		declare name=$(realpath $("${cc}" --print-file-name='libegcc.so'))
+		# libgcc_s
+		declare name=$(realpath $("${cc}" --print-file-name='libgcc_s.so.1'))
 	fi
 	
 	declare soname=$("${readelf}" -d "${name}" | grep 'SONAME' | sed --regexp-extended 's/.+\[(.+)\]/\1/g')
