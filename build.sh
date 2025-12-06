@@ -34,6 +34,9 @@ declare -r gcc_directory="/tmp/gcc-releases-gcc-${gcc_major}"
 declare -r zstd_tarball='/tmp/zstd.tar.gz'
 declare -r zstd_directory='/tmp/zstd-dev'
 
+declare -r zlib_tarball='/tmp/zlib.tar.gz'
+declare -r zlib_directory='/tmp/zlib-develop'
+
 declare -r triplet='x86_64-unknown-dragonfly'
 declare -r sysroot_url="https://github.com/AmanoTeam/dragonfly-sysroot/releases/latest/download/${triplet}.tar.xz"
 
@@ -136,6 +139,25 @@ if ! [ -f "${isl_tarball}" ]; then
 		--file="${isl_tarball}"
 	
 	patch --directory="${isl_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0001-Remove-hardcoded-RPATH-and-versioned-SONAME-from-libisl.patch"
+fi
+
+if ! [ -f "${zlib_tarball}" ]; then
+	curl \
+		--url 'https://github.com/madler/zlib/archive/refs/heads/develop.tar.gz' \
+		--retry '30' \
+		--retry-all-errors \
+		--retry-delay '0' \
+		--retry-max-time '0' \
+		--location \
+		--silent \
+		--output "${zlib_tarball}"
+	
+	tar \
+		--directory="$(dirname "${zlib_directory}")" \
+		--extract \
+		--file="${zlib_tarball}"
+	
+	patch --directory="${zlib_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0001-Remove-versioned-SONAME-from-libz.patch"
 fi
 
 if ! [ -f "${zstd_tarball}" ]; then
@@ -349,6 +371,23 @@ fi
 make all --jobs
 make install
 
+[ -d "${zlib_directory}/build" ] || mkdir "${zlib_directory}/build"
+
+cd "${zlib_directory}/build"
+rm --force --recursive ./*
+
+../configure \
+	--host="${CROSS_COMPILE_TRIPLET}" \
+	--prefix="${toolchain_directory}" \
+	CFLAGS="${ccflags}" \
+	CXXFLAGS="${ccflags}" \
+	LDFLAGS="${linkflags}"
+
+make all --jobs
+make install
+
+unlink "${toolchain_directory}/lib/libz.a"
+
 [ -d "${zstd_directory}/.build" ] || mkdir "${zstd_directory}/.build"
 
 cd "${zstd_directory}/.build"
@@ -421,6 +460,7 @@ rm --force --recursive ./*
 	--with-static-standard-libraries \
 	--with-sysroot="${toolchain_directory}/${triplet}" \
 	--with-zstd="${toolchain_directory}" \
+	--with-system-zlib \
 	CFLAGS="${ccflags} -I${toolchain_directory}/include -L${toolchain_directory}/lib" \
 	CXXFLAGS="${ccflags} -I${toolchain_directory}/include -L${toolchain_directory}/lib" \
 	LDFLAGS="${linkflags}"
@@ -465,6 +505,7 @@ rm --force --recursive ./*
 	--with-mpfr="${toolchain_directory}" \
 	--with-isl="${toolchain_directory}" \
 	--with-zstd="${toolchain_directory}" \
+	--with-system-zlib \
 	--with-gcc-major-version-only \
 	--with-sysroot="${toolchain_directory}/${triplet}" \
 	--with-native-system-header-dir='/include' \
