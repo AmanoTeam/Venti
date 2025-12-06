@@ -453,14 +453,20 @@ rm --force --recursive ./*
 	--host="${CROSS_COMPILE_TRIPLET}" \
 	--target="${triplet}" \
 	--prefix="${toolchain_directory}" \
-	--enable-gold \
+	--disable-gold \
 	--enable-ld \
 	--enable-lto \
+	--enable-separate-code \
+	--enable-rosegment \
+	--enable-relro \
+	--enable-compressed-debug-sections='all' \
+	--enable-default-compressed-debug-sections-algorithm='zstd' \
 	--disable-gprofng \
-	--with-static-standard-libraries \
+	--disable-default-execstack \
 	--with-sysroot="${toolchain_directory}/${triplet}" \
 	--with-zstd="${toolchain_directory}" \
 	--with-system-zlib \
+	--without-static-standard-libraries \
 	CFLAGS="${ccflags} -I${toolchain_directory}/include -L${toolchain_directory}/lib" \
 	CXXFLAGS="${ccflags} -I${toolchain_directory}/include -L${toolchain_directory}/lib" \
 	LDFLAGS="${linkflags}"
