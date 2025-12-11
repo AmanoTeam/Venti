@@ -102,6 +102,7 @@ jobs:
           # NetBSD
           'i386-unknown-netbsdelf',
           'x86_64-unknown-netbsd',
+          'aarch64-unknown-netbsd',
           
           # OpenBSD
           'x86_64-unknown-openbsd',
