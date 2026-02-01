@@ -1,11 +1,9 @@
-# Venti
+# dragonfly-gcc-cross
 
-A GCC cross-compiler targeting DragonFly BSD 5.0.0.
+This is a GCC cross-compiler targeting DragonFly BSD.
 
-## Target architectures
+## releases
 
-* `x86_64-unknown-dragonfly`
+The current release is based on GCC 15 and supports cross-compiling for the `x86_64` target. The toolchain includes support for the C and C++ frontends.
 
-## Releases
-
-You can obtain releases from the  [releases](https://github.com/AmanoTeam/Venti/releases) page.
+You can download the prebuilt toolchains from the [releases](https://github.com/AmanoTeam/Venti/releases) page.

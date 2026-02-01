@@ -7,6 +7,8 @@ declare -r share_directory="${toolchain_directory}/usr/local/share/venti"
 
 declare -r environment="LD_LIBRARY_PATH=${toolchain_directory}/lib PATH=${PATH}:${toolchain_directory}/bin"
 
+declare -r gcc_major='15'
+
 declare -r workdir="${PWD}"
 
 declare -r revision="$(git rev-parse --short HEAD)"
@@ -27,7 +29,7 @@ declare -r binutils_tarball='/tmp/binutils.tar.xz'
 declare -r binutils_directory='/tmp/binutils'
 
 declare -r gcc_tarball='/tmp/gcc.tar.xz'
-declare -r gcc_directory='/tmp/gcc-releases-gcc-15'
+declare -r gcc_directory="/tmp/gcc-releases-gcc-${gcc_major}"
 
 declare -r zlib_tarball='/tmp/zlib.tar.gz'
 declare -r zlib_directory='/tmp/zlib-develop'
@@ -88,13 +90,14 @@ declare -r \
 
 if ! [ -f "${gmp_tarball}" ]; then
 	curl \
-		--url 'https://mirrors.kernel.org/gnu/gmp/gmp-6.3.0.tar.xz' \
+		--url 'https://gnu.mirror.constant.com/gmp/gmp-6.3.0.tar.xz' \
 		--retry '30' \
 		--retry-all-errors \
 		--retry-delay '0' \
 		--retry-max-time '0' \
 		--location \
 		--silent \
+		--show-error \
 		--output "${gmp_tarball}"
 	
 	tar \
@@ -107,13 +110,14 @@ fi
 
 if ! [ -f "${mpfr_tarball}" ]; then
 	curl \
-		--url 'https://mirrors.kernel.org/gnu/mpfr/mpfr-4.2.2.tar.xz' \
+		--url 'https://gnu.mirror.constant.com/mpfr/mpfr-4.2.2.tar.xz' \
 		--retry '30' \
 		--retry-all-errors \
 		--retry-delay '0' \
 		--retry-max-time '0' \
 		--location \
 		--silent \
+		--show-error \
 		--output "${mpfr_tarball}"
 	
 	tar \
@@ -126,13 +130,14 @@ fi
 
 if ! [ -f "${mpc_tarball}" ]; then
 	curl \
-		--url 'https://mirrors.kernel.org/gnu/mpc/mpc-1.3.1.tar.gz' \
+		--url 'https://gnu.mirror.constant.com/mpc/mpc-1.3.1.tar.gz' \
 		--retry '30' \
 		--retry-all-errors \
 		--retry-delay '0' \
 		--retry-max-time '0' \
 		--location \
 		--silent \
+		--show-error \
 		--output "${mpc_tarball}"
 	
 	tar \
@@ -152,6 +157,7 @@ if ! [ -f "${isl_tarball}" ]; then
 		--retry-max-time '0' \
 		--location \
 		--silent \
+		--show-error \
 		--output "${isl_tarball}"
 	
 	tar \
@@ -175,6 +181,7 @@ if ! [ -f "${binutils_tarball}" ]; then
 		--retry-max-time '0' \
 		--location \
 		--silent \
+		--show-error \
 		--output "${binutils_tarball}"
 	
 	tar \
@@ -209,6 +216,7 @@ if ! [ -f "${zlib_tarball}" ]; then
 		--retry-max-time '0' \
 		--location \
 		--silent \
+		--show-error \
 		--output "${zlib_tarball}"
 	
 	tar \
@@ -228,6 +236,7 @@ if ! [ -f "${zstd_tarball}" ]; then
 		--retry-max-time '0' \
 		--location \
 		--silent \
+		--show-error \
 		--output "${zstd_tarball}"
 	
 	tar \
@@ -238,13 +247,14 @@ fi
 
 if ! [ -f "${gcc_tarball}" ]; then
 	curl \
-		--url 'https://github.com/gcc-mirror/gcc/archive/refs/heads/releases/gcc-15.tar.gz' \
+		--url "https://github.com/gcc-mirror/gcc/archive/refs/heads/releases/gcc-${gcc_major}.tar.gz" \
 		--retry '30' \
 		--retry-all-errors \
 		--retry-delay '0' \
 		--retry-max-time '0' \
 		--location \
 		--silent \
+		--show-error \
 		--output "${gcc_tarball}"
 	
 	tar \
@@ -275,8 +285,6 @@ if ! [ -f "${gcc_tarball}" ]; then
 	patch --directory="${gcc_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0005-Turn-Wint-conversion-back-into-an-warning.patch"
 	patch --directory="${gcc_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/gcc-15/0006-Turn-Wincompatible-pointer-types-back-into-an-warning.patch"
 	patch --directory="${gcc_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0007-Add-relative-RPATHs-to-GCC-host-tools.patch"
-	patch --directory="${gcc_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0008-Add-ARM-and-ARM64-drivers-to-OpenBSD-host-tools.patch"
-	patch --directory="${gcc_directory}" --strip='1' --input="${workdir}/submodules/obggcc/patches/0009-Fix-missing-stdint.h-include-when-compiling-host-tools-on-OpenBSD.patch"
 fi
 
 # Follow Debian's approach to remove hardcoded RPATHs from binaries
@@ -299,15 +307,6 @@ sed \
 	"${mpc_directory}/configure" \
 	"${mpfr_directory}/configure" \
 	"${gmp_directory}/configure"
-
-# Fix Autotools mistakenly detecting shared libraries as not supported on OpenBSD
-while read file; do
-	sed \
-		--in-place \
-		--regexp-extended \
-		's|test -f /usr/libexec/ld.so|true|g' \
-		"${file}"
-done <<< "$(find '/tmp' -type 'f' -name 'configure')"
 
 # Force GCC and binutils to prefix host tools with the target triplet even in native builds
 sed \
@@ -518,6 +517,7 @@ for triplet in "${targets[@]}"; do
 		--retry-max-time '0' \
 		--location \
 		--silent \
+		--show-error \
 		--output "${sysroot_file}"
 	
 	tar \
@@ -538,7 +538,7 @@ for triplet in "${targets[@]}"; do
 		--host="${CROSS_COMPILE_TRIPLET}" \
 		--target="${triplet}" \
 		--prefix="${toolchain_directory}" \
-		--with-linker-hash-style='both' \
+		--with-linker-hash-style='gnu' \
 		--with-gmp="${toolchain_directory}" \
 		--with-mpc="${toolchain_directory}" \
 		--with-mpfr="${toolchain_directory}" \
@@ -553,9 +553,7 @@ for triplet in "${targets[@]}"; do
 		--enable-__cxa_atexit \
 		--enable-cet='auto' \
 		--enable-checking='release' \
-		--disable-default-pie \
 		--enable-default-ssp \
-		--disable-gnu-unique-object \
 		--enable-gnu-indirect-function \
 		--enable-languages='c,c++' \
 		--enable-libstdcxx-backtrace \
@@ -571,18 +569,23 @@ for triplet in "${targets[@]}"; do
 		--enable-threads='posix' \
 		--enable-libstdcxx-threads \
 		--enable-libssp \
-		--enable-cxx-flags="${linkflags}" \
 		--enable-host-pie \
 		--enable-host-shared \
 		--enable-libgomp \
 		--with-specs="${specs}" \
 		--with-pic \
+		--with-gnu-as \
+		--with-gnu-ld \
+		--disable-gnu-unique-object \
+		--disable-default-pie \
 		--disable-libsanitizer \
 		--disable-fixincludes \
 		--disable-libstdcxx-pch \
 		--disable-werror \
 		--disable-bootstrap \
 		--disable-multilib \
+		--disable-canonical-system-headers \
+		--disable-libstdcxx-verbose \
 		--without-headers \
 		--without-static-standard-libraries \
 		${extra_configure_flags} \
@@ -618,11 +621,12 @@ for triplet in "${targets[@]}"; do
 	
 	unlink './libgcc_s.so' && echo 'GROUP ( libgcc_s.so.1 -lgcc )' > './libgcc_s.so'
 	
-	cd "${toolchain_directory}/lib/bfd-plugins"
-	
-	if ! [ -f './liblto_plugin.so' ]; then
-		ln --symbolic "../../libexec/gcc/${triplet}/"*'/liblto_plugin.so' './'
-	fi
+	ln \
+		--symbolic \
+		--relative \
+		--force \
+		"${toolchain_directory}/libexec/gcc/${triplet}/${gcc_major}/liblto_plugin.so" \
+		"${toolchain_directory}/lib/bfd-plugins"
 done
 
 # Delete libtool files and other unnecessary files GCC installs
