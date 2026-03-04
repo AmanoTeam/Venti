@@ -1,6 +1,11 @@
 name: Build
 
 on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    branches:
+        - '**'
   push:
     branches:
         - '**'
@@ -116,10 +121,7 @@ jobs:
           'i686-unknown-linux-android21',
           'aarch64-unknown-linux-android',
           'riscv64-unknown-linux-android',
-          'armv5-unknown-linux-androideabi21',
           'armv7-unknown-linux-androideabi21',
-          'mips64el-unknown-linux-android',
-          'mipsel-unknown-linux-android21'
         ]
     steps:
     - uses: actions/checkout@main
