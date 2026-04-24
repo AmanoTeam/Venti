@@ -526,7 +526,7 @@ for triplet in "${targets[@]}"; do
 	
 	cd "$(mktemp --directory)"
 	
-	declare sysroot_url="https://github.com/AmanoTeam/dragonfly-sysroot/releases/latest/download/${triplet}.tar.xz"
+	declare sysroot_url="https://github.com/AmanoTeam/Venti/releases/download/sysroot/${triplet}.tar.xz"
 	declare sysroot_file="${PWD}/${triplet}.tar.xz"
 	declare sysroot_directory="${PWD}/${triplet}"
 	
@@ -593,21 +593,13 @@ for triplet in "${targets[@]}"; do
 		--enable-host-pie \
 		--enable-host-shared \
 		--enable-libgomp \
+		--enable-libstdcxx-verbose \
 		--with-specs="${specs}" \
 		--with-pic \
 		--with-gnu-as \
 		--with-gnu-ld \
-		--disable-gnu-unique-object \
-		--disable-default-pie \
-		--disable-libsanitizer \
 		--disable-fixincludes \
-		--disable-libstdcxx-pch \
-		--disable-werror \
-		--disable-bootstrap \
-		--disable-multilib \
 		--disable-canonical-system-headers \
-		--disable-libstdcxx-verbose \
-		--without-headers \
 		--without-static-standard-libraries \
 		${extra_configure_flags} \
 		CFLAGS="${ccflags}" \
@@ -621,9 +613,6 @@ for triplet in "${targets[@]}"; do
 	fi
 	
 	env ${args} make \
-		CFLAGS_FOR_TARGET="${ccflags} ${linkflags}" \
-		CXXFLAGS_FOR_TARGET="${ccflags} ${linkflags}" \
-		LDFLAGS_FOR_TARGET="${linkflags}" \
 		gcc_cv_objdump="${CROSS_COMPILE_TRIPLET}-objdump" \
 		all --jobs="${max_jobs}"
 	make install
@@ -667,6 +656,8 @@ if ! (( is_native )); then
 	readelf="${READELF}"
 fi
 
+cd "${workdir}"
+
 # Bundle both libstdc++ and libgcc within host tools
 if ! (( is_native )) && [[ "${CROSS_COMPILE_TRIPLET}" != *'-darwin'* ]]; then
 	[ -d "${toolchain_directory}/lib" ] || mkdir "${toolchain_directory}/lib"
@@ -701,22 +692,6 @@ if ! (( is_native )) && [[ "${CROSS_COMPILE_TRIPLET}" != *'-darwin'* ]]; then
 	declare soname=$("${readelf}" -d "${name}" | grep 'SONAME' | sed --regexp-extended 's/.+\[(.+)\]/\1/g')
 	
 	cp "${name}" "${toolchain_directory}/lib/${soname}"
-	
-	# libiconv
-	declare name=$(realpath $("${cc}" --print-file-name='libiconv.so'))
-	
-	if [ -f "${name}" ]; then
-		declare soname=$("${readelf}" -d "${name}" | grep 'SONAME' | sed --regexp-extended 's/.+\[(.+)\]/\1/g')
-		cp "${name}" "${toolchain_directory}/lib/${soname}"
-	fi
-	
-	# libcharset
-	declare name=$(realpath $("${cc}" --print-file-name='libcharset.so'))
-	
-	if [ -f "${name}" ]; then
-		declare soname=$("${readelf}" -d "${name}" | grep 'SONAME' | sed --regexp-extended 's/.+\[(.+)\]/\1/g')
-		cp "${name}" "${toolchain_directory}/lib/${soname}"
-	fi
 fi
 
 mkdir --parent "${share_directory}"
